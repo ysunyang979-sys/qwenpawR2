@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
-"""Self-contained Cloudflare R2 Storage Client for QwenPaw Plugin."""
+"""Cloudflare R2 Storage Adapter for QwenPaw.
+
+Provides unified file operations (list, read, write, delete, status)
+against Cloudflare R2 buckets using S3 compatible protocol.
+Automatically syncs credentials into os.environ, shell rc files,
+and enables agent tools so AI can seamlessly operate R2.
+"""
 
 import json
 import logging
 import os
-import urllib.parse
-import urllib.request
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
-logger = logging.getLogger(__name__)
 
 try:
     import boto3
@@ -20,8 +21,8 @@ try:
     HAS_BOTO3 = True
 except ImportError:
     HAS_BOTO3 = False
-    Config = None
-    ClientError = Exception
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -46,9 +47,12 @@ class R2Config:
         return bool(self.access_key_id and self.secret_access_key and (self.endpoint_url or self.account_id))
 
 
+def sync_env_and_agents(cfg: R2Config) -> None:
+    """Synchronize R2 S3 credentials into os.environ, ~/.bashrc, and agent configs."""
+    if not cfg.has_s3_creds:
+        return
 
-def sync_env_vars(cfg: R2Config) -> None:
-    """Synchronize R2 S3 credentials into os.environ for external tools."""
+    # 1. Inject into Python os.environ
     if cfg.account_id:
         os.environ["CF_ACCOUNT_ID"] = cfg.account_id
         os.environ["R2_ACCOUNT_ID"] = cfg.account_id
@@ -65,6 +69,61 @@ def sync_env_vars(cfg: R2Config) -> None:
         os.environ["AWS_ENDPOINT"] = cfg.effective_endpoint
         os.environ["R2_ENDPOINT_URL"] = cfg.effective_endpoint
     os.environ["AWS_DEFAULT_REGION"] = "auto"
+
+    # 2. Write export lines to ~/.bashrc, ~/.profile, ~/.zshrc for Linux/Container shells
+    lines = [
+        f'export CF_ACCOUNT_ID="{cfg.account_id}"',
+        f'export AWS_ACCESS_KEY_ID="{cfg.access_key_id}"',
+        f'export AWS_SECRET_ACCESS_KEY="{cfg.secret_access_key}"',
+        f'export AWS_ENDPOINT="{cfg.effective_endpoint}"',
+        f'export AWS_ENDPOINT_URL="{cfg.effective_endpoint}"',
+        f'export R2_BUCKET_NAME="{cfg.bucket_name}"',
+        'export AWS_DEFAULT_REGION="auto"',
+    ]
+    block = "\n# --- Cloudflare R2 Credentials (auto-generated) ---\n" + "\n".join(lines) + "\n"
+    for rc in [".bashrc", ".profile", ".zshrc"]:
+        rc_path = Path.home() / rc
+        try:
+            text = rc_path.read_text(encoding="utf-8", errors="ignore") if rc_path.is_file() else ""
+            if "AWS_SECRET_ACCESS_KEY" not in text or cfg.secret_access_key not in text:
+                with open(rc_path, "a", encoding="utf-8") as f:
+                    f.write(block)
+        except Exception:
+            pass
+
+    # 3. Automatically enable R2 tools in all agent configurations
+    workspaces_dir = Path.home() / ".qwenpaw" / "workspaces"
+    if workspaces_dir.is_dir():
+        r2_tools = ["upload_r2_file", "list_r2_files", "read_r2_file", "delete_r2_file", "get_r2_status"]
+        for agent_file in workspaces_dir.glob("*/agent.json"):
+            try:
+                with open(agent_file, "r", encoding="utf-8") as f:
+                    adata = json.load(f)
+                b_tools = adata.setdefault("tools", {}).setdefault("builtin_tools", {})
+                changed = False
+                for t in r2_tools:
+                    if t in b_tools:
+                        if not b_tools[t].get("enabled"):
+                            b_tools[t]["enabled"] = True
+                            changed = True
+                    else:
+                        b_tools[t] = {
+                            "name": t,
+                            "enabled": True,
+                            "description": "",
+                            "display_to_user": True,
+                            "async_execution": False,
+                            "icon": "☁️",
+                            "config": {}
+                        }
+                        changed = True
+                if changed:
+                    with open(agent_file, "w", encoding="utf-8") as f:
+                        json.dump(adata, f, indent=2, ensure_ascii=False)
+                    logger.info(f"Auto-enabled R2 tools in {agent_file}")
+            except Exception as e:
+                logger.debug(f"Failed enabling R2 tools in {agent_file}: {e}")
+
 
 def load_config() -> R2Config:
     def _env(name: str, default: str = "") -> str:
@@ -101,7 +160,7 @@ def load_config() -> R2Config:
     except Exception as e:
         logger.debug("Failed reading ~/.qwenpaw/config.json: %s", e)
 
-    sync_env_vars(cfg)
+    sync_env_and_agents(cfg)
     return cfg
 
 
@@ -116,7 +175,7 @@ def save_config(new_cfg: Dict[str, Any]) -> None:
                 data = json.load(f)
         except Exception:
             data = {}
-    
+
     data.setdefault("r2", {})
     for k in ["account_id", "access_key_id", "secret_access_key", "bucket_name", "endpoint_url"]:
         if k in new_cfg and new_cfg[k] is not None:
@@ -153,89 +212,87 @@ class R2Service:
         return self._s3_client
 
     def get_status(self) -> Dict[str, Any]:
-        configured = bool(self.config.has_s3_creds)
+        has_cfg = self.config.has_s3_creds
         res = {
-            "configured": configured,
+            "configured": has_cfg,
             "connected": False,
             "bucket": self.config.bucket_name,
             "account_id": self.config.account_id,
+            "endpoint": self.config.effective_endpoint,
             "error": None,
         }
-        if not configured:
-            res["error"] = "未配置 R2 S3 凭证，请点击右上角「配置凭证」进行设置。"
+        if not has_cfg:
+            res["error"] = "Cloudflare R2 S3 凭证未配置，请点击右上角「配置凭证」设置。"
             return res
 
         try:
             s3 = self._get_s3()
             s3.head_bucket(Bucket=self.config.bucket_name)
             res["connected"] = True
-            return res
+            sync_env_and_agents(self.config)
         except Exception as e:
-            res["error"] = str(e)
-            return res
+            res["error"] = f"连接失败: {str(e)}"
+        return res
 
-    def list_directory(self, path: str = "", limit: int = 200) -> Dict[str, Any]:
-        prefix = path.strip("/")
+    def list_directory(self, path: str = "", limit: int = 100) -> Dict[str, Any]:
+        s3 = self._get_s3()
+        prefix = path.lstrip("/")
         if prefix and not prefix.endswith("/"):
             prefix += "/"
 
-        s3 = self._get_s3()
         resp = s3.list_objects_v2(
             Bucket=self.config.bucket_name,
             Prefix=prefix,
             Delimiter="/",
-            MaxKeys=min(limit, 1000),
+            MaxKeys=limit,
         )
 
         entries = []
-        for p in resp.get("CommonPrefixes", []):
-            dir_prefix = p.get("Prefix", "")
-            dir_name = dir_prefix.rstrip("/").split("/")[-1]
+        for cp in resp.get("CommonPrefixes", []):
+            dir_prefix = cp.get("Prefix", "")
+            name = dir_prefix.rstrip("/").split("/")[-1]
             entries.append({
-                "name": dir_name,
+                "name": name,
                 "path": dir_prefix.rstrip("/"),
                 "kind": "directory",
                 "size": None,
-                "modified_at": datetime.now(timezone.utc).isoformat(),
+                "modified_at": None,
             })
 
         for obj in resp.get("Contents", []):
-            key = obj.get("Key", "")
-            if key == prefix:
+            k = obj.get("Key", "")
+            if k == prefix:
                 continue
-            name = key.split("/")[-1]
+            name = k.split("/")[-1]
             entries.append({
                 "name": name,
-                "path": key,
+                "path": k,
                 "kind": "file",
                 "size": obj.get("Size", 0),
-                "modified_at": obj.get("LastModified", datetime.now(timezone.utc)).isoformat(),
+                "modified_at": obj.get("LastModified").isoformat() if obj.get("LastModified") else None,
             })
 
-        return {"directory": path, "entries": entries}
+        return {"current_path": path, "entries": entries}
 
-    def read_file_chunk(self, path: str, offset: int = 0, limit: int = 100000) -> Dict[str, Any]:
+    def read_file_chunk(self, path: str, offset: int = 0, limit: int = 1024 * 1024) -> Dict[str, Any]:
         key = path.lstrip("/")
         s3 = self._get_s3()
-        range_header = f"bytes={offset}-{offset + limit - 1}"
-        try:
-            resp = s3.get_object(Bucket=self.config.bucket_name, Key=key, Range=range_header)
-            content_bytes = resp["Body"].read()
-            total_size = resp.get("ContentRange", "").split("/")[-1]
-        except Exception:
-            resp = s3.get_object(Bucket=self.config.bucket_name, Key=key)
-            content_bytes = resp["Body"].read()[offset:offset + limit]
-            total_size = resp.get("ContentLength", len(content_bytes))
+        head = s3.head_object(Bucket=self.config.bucket_name, Key=key)
+        total_size = head.get("ContentLength", 0)
 
+        byte_range = f"bytes={offset}-{offset + limit - 1}"
+        resp = s3.get_object(Bucket=self.config.bucket_name, Key=key, Range=byte_range)
+        body = resp["Body"].read()
         try:
-            content_str = content_bytes.decode("utf-8")
+            text = body.decode("utf-8")
         except UnicodeDecodeError:
-            content_str = f"[二进制或媒体文件，大小: {len(content_bytes)} 字节]"
+            text = body.decode("latin-1", errors="replace")
 
         return {
             "path": path,
-            "content": content_str,
-            "total_size": int(total_size) if str(total_size).isdigit() else len(content_bytes),
+            "total_size": total_size,
+            "offset": offset,
+            "content": text,
         }
 
     def save_text_file(self, path: str, content: str) -> Dict[str, Any]:
