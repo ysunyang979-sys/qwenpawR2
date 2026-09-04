@@ -1,7 +1,7 @@
 {
   "id": "cloudflare-r2-tool",
   "name": "Cloudflare R2 云存储",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "general",
   "description": "Cloudflare R2 云端对象存储管理应用，在左侧导航栏提供可视化文件管理器，同时支持智能体对话读写",
   "description_i18n": {
@@ -30,19 +30,19 @@
       },
       {
         "name": "list_r2_files",
-        "description": "List files and directories in Cloudflare R2 bucket with optional prefix path",
+        "description": "列出 Cloudflare R2 存储桶中的文件和目录列表。",
         "icon": "☁️",
         "requires_config": false
       },
       {
         "name": "read_r2_file",
-        "description": "Read text content of a file from Cloudflare R2 cloud bucket",
+        "description": "从 Cloudflare R2 存储桶中读取文本、代码或文档文件内容。",
         "icon": "📄",
         "requires_config": false
       },
       {
         "name": "upload_r2_file",
-        "description": "Upload text or content directly to a path in Cloudflare R2 bucket",
+        "description": "直接将文本或本地工作区文件上传存放到 Cloudflare R2 存储桶中。当需要在 R2 存放、上传文件时调用此工具。",
         "icon": "⬆️",
         "requires_config": false
       },

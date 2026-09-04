@@ -46,6 +46,26 @@ class R2Config:
         return bool(self.access_key_id and self.secret_access_key and (self.endpoint_url or self.account_id))
 
 
+
+def sync_env_vars(cfg: R2Config) -> None:
+    """Synchronize R2 S3 credentials into os.environ for external tools."""
+    if cfg.account_id:
+        os.environ["CF_ACCOUNT_ID"] = cfg.account_id
+        os.environ["R2_ACCOUNT_ID"] = cfg.account_id
+    if cfg.access_key_id:
+        os.environ["AWS_ACCESS_KEY_ID"] = cfg.access_key_id
+        os.environ["R2_ACCESS_KEY_ID"] = cfg.access_key_id
+    if cfg.secret_access_key:
+        os.environ["AWS_SECRET_ACCESS_KEY"] = cfg.secret_access_key
+        os.environ["R2_SECRET_ACCESS_KEY"] = cfg.secret_access_key
+    if cfg.bucket_name:
+        os.environ["R2_BUCKET_NAME"] = cfg.bucket_name
+    if cfg.effective_endpoint:
+        os.environ["AWS_ENDPOINT_URL"] = cfg.effective_endpoint
+        os.environ["AWS_ENDPOINT"] = cfg.effective_endpoint
+        os.environ["R2_ENDPOINT_URL"] = cfg.effective_endpoint
+    os.environ["AWS_DEFAULT_REGION"] = "auto"
+
 def load_config() -> R2Config:
     def _env(name: str, default: str = "") -> str:
         return os.environ.get(f"QWENPAW_{name}", os.environ.get(name, default)).strip()
@@ -81,6 +101,7 @@ def load_config() -> R2Config:
     except Exception as e:
         logger.debug("Failed reading ~/.qwenpaw/config.json: %s", e)
 
+    sync_env_vars(cfg)
     return cfg
 
 
