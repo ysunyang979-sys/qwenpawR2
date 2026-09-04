@@ -1,12 +1,12 @@
 {
   "id": "cloudflare-r2-tool",
   "name": "Cloudflare R2 云存储",
-  "version": "1.2.3",
+  "version": "1.3.0",
   "type": "general",
-  "description": "Cloudflare R2 云端对象存储管理应用，在左侧导航栏提供可视化文件管理器，同时支持智能体对话读写",
+  "description": "Cloudflare R2 云端对象存储管理应用，提供与工作区文件完全一致的分屏双栏文件管理器（目录树+多标签文档预览/编辑），同时支持智能体对话全自动读写与本地同步",
   "description_i18n": {
-    "zh-CN": "Cloudflare R2 云端对象存储管理应用，在左侧导航栏提供可视化文件管理器，同时支持智能体对话读写",
-    "en-US": "Cloudflare R2 cloud object storage manager app with visual file explorer and agent tools"
+    "zh-CN": "Cloudflare R2 云端对象存储管理应用，提供与工作区文件完全一致的分屏双栏文件管理器（目录树+多标签文档预览/编辑），同时支持智能体对话全自动读写与本地同步",
+    "en-US": "Cloudflare R2 cloud object storage manager app with split-pane file explorer matching native Files UI and autonomous agent tools"
   },
   "author": "Custom",
   "entry": {
@@ -24,31 +24,37 @@
     "tools": [
       {
         "name": "get_r2_status",
-        "description": "Check connection status and configuration of Cloudflare R2 bucket",
+        "description": "查询 Cloudflare R2 存储桶连通状态与配置信息",
         "icon": "⚡",
         "requires_config": false
       },
       {
         "name": "list_r2_files",
-        "description": "列出 Cloudflare R2 存储桶中的文件和目录列表。",
+        "description": "列出 Cloudflare R2 云端存储桶中的文件和目录列表",
         "icon": "☁️",
         "requires_config": false
       },
       {
         "name": "read_r2_file",
-        "description": "从 Cloudflare R2 存储桶中读取文本、代码或文档文件内容。",
+        "description": "从 Cloudflare R2 存储桶中读取文本、代码或文档文件内容",
         "icon": "📄",
         "requires_config": false
       },
       {
         "name": "upload_r2_file",
-        "description": "直接将文本或本地工作区文件上传存放到 Cloudflare R2 存储桶中。当需要在 R2 存放、上传文件时调用此工具。",
+        "description": "在 Cloudflare R2 云端存储空间中创建、写入、保存或上传文件。当用户在对话中提到'存储空间'、'R2'、'云端'时，必须且只能调用本工具直接存入 R2，严禁调用本地工作区创建工具！",
         "icon": "⬆️",
         "requires_config": false
       },
       {
+        "name": "sync_local_to_r2",
+        "description": "将本地工作区中已有的文件（例如刚刚创建在本地的 note.txt）同步上传到 Cloudflare R2 云端存储空间",
+        "icon": "🔄",
+        "requires_config": false
+      },
+      {
         "name": "delete_r2_file",
-        "description": "Delete a file from Cloudflare R2 bucket",
+        "description": "从 Cloudflare R2 云端存储桶中删除指定文件",
         "icon": "🗑️",
         "requires_config": false
       }
