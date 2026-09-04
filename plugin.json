@@ -1,0 +1,56 @@
+{
+  "id": "cloudflare-r2-tool",
+  "name": "Cloudflare R2 Storage Tool",
+  "version": "1.0.0",
+  "type": "tool",
+  "description": "Read, write, list and manage files in Cloudflare R2 cloud object storage",
+  "description_i18n": {
+    "zh-CN": "在对话中直接管理与读写 Cloudflare R2 云端对象存储中的文件（支持列表、读取、上传、删除）",
+    "en-US": "Read, write, list and manage files in Cloudflare R2 cloud object storage"
+  },
+  "author": "Custom",
+  "entry": {
+    "backend": "cloudflare_r2.py"
+  },
+  "dependencies": [
+    "boto3>=1.28.0"
+  ],
+  "qwenpaw_version": {
+    "min": "1.1.0",
+    "max": "2.2.0"
+  },
+  "meta": {
+    "tools": [
+      {
+        "name": "list_r2_files",
+        "description": "List files and directories in Cloudflare R2 bucket with optional prefix path",
+        "icon": "☁️",
+        "requires_config": false
+      },
+      {
+        "name": "read_r2_file",
+        "description": "Read text content of a file from Cloudflare R2 cloud bucket",
+        "icon": "📄",
+        "requires_config": false
+      },
+      {
+        "name": "upload_r2_file",
+        "description": "Upload text or content directly to a path in Cloudflare R2 bucket",
+        "icon": "⬆️",
+        "requires_config": false
+      },
+      {
+        "name": "delete_r2_file",
+        "description": "Delete a file from Cloudflare R2 bucket",
+        "icon": "🗑️",
+        "requires_config": false
+      },
+      {
+        "name": "get_r2_status",
+        "description": "Check connection status and configuration of Cloudflare R2 bucket",
+        "icon": "⚡",
+        "requires_config": false
+      }
+    ]
+  }
+}
