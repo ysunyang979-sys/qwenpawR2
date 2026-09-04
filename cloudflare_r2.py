@@ -29,11 +29,21 @@ class CloudflareR2ToolPlugin:
         tool = _load_tool_module()
 
         api.register_tool(
+            tool_name="get_r2_status",
+            tool_func=tool.get_r2_status,
+            description="Check connection status and configuration of Cloudflare R2 bucket",
+            icon="⚡",
+            enabled=True,
+            tool_type="network",
+        )
+
+        api.register_tool(
             tool_name="list_r2_files",
             tool_func=tool.list_r2_files,
             description="List files and directories in Cloudflare R2 bucket with optional prefix path",
             icon="☁️",
-            tool_type="storage",
+            enabled=True,
+            tool_type="network",
         )
 
         api.register_tool(
@@ -41,7 +51,8 @@ class CloudflareR2ToolPlugin:
             tool_func=tool.read_r2_file,
             description="Read text content of a file from Cloudflare R2 cloud bucket",
             icon="📄",
-            tool_type="storage",
+            enabled=True,
+            tool_type="network",
         )
 
         api.register_tool(
@@ -49,7 +60,8 @@ class CloudflareR2ToolPlugin:
             tool_func=tool.upload_r2_file,
             description="Upload text or content directly to a path in Cloudflare R2 bucket",
             icon="⬆️",
-            tool_type="storage",
+            enabled=True,
+            tool_type="network",
         )
 
         api.register_tool(
@@ -57,15 +69,8 @@ class CloudflareR2ToolPlugin:
             tool_func=tool.delete_r2_file,
             description="Delete a file from Cloudflare R2 bucket",
             icon="🗑️",
-            tool_type="storage",
-        )
-
-        api.register_tool(
-            tool_name="get_r2_status",
-            tool_func=tool.get_r2_status,
-            description="Check connection status and configuration of Cloudflare R2 bucket",
-            icon="⚡",
-            tool_type="storage",
+            enabled=True,
+            tool_type="network",
         )
 
 

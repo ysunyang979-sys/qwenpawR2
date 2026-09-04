@@ -1,11 +1,11 @@
 {
   "id": "cloudflare-r2-tool",
   "name": "Cloudflare R2 Storage Tool",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "tool",
   "description": "Read, write, list and manage files in Cloudflare R2 cloud object storage",
   "description_i18n": {
-    "zh-CN": "在对话中直接管理与读写 Cloudflare R2 云端对象存储中的文件（支持列表、读取、上传、删除）",
+    "zh-CN": "在对话中直接管理与读写 Cloudflare R2 云端对象存储文件（列出、读取、上传、删除）",
     "en-US": "Read, write, list and manage files in Cloudflare R2 cloud object storage"
   },
   "author": "Custom",
@@ -21,6 +21,12 @@
   },
   "meta": {
     "tools": [
+      {
+        "name": "get_r2_status",
+        "description": "Check connection status and configuration of Cloudflare R2 bucket",
+        "icon": "⚡",
+        "requires_config": false
+      },
       {
         "name": "list_r2_files",
         "description": "List files and directories in Cloudflare R2 bucket with optional prefix path",
@@ -43,12 +49,6 @@
         "name": "delete_r2_file",
         "description": "Delete a file from Cloudflare R2 bucket",
         "icon": "🗑️",
-        "requires_config": false
-      },
-      {
-        "name": "get_r2_status",
-        "description": "Check connection status and configuration of Cloudflare R2 bucket",
-        "icon": "⚡",
         "requires_config": false
       }
     ]
