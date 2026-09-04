@@ -1,7 +1,7 @@
 {
   "id": "cloudflare-r2-tool",
   "name": "Cloudflare R2 云存储",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "type": "general",
   "description": "Cloudflare R2 云端对象存储管理应用，在左侧导航栏提供可视化文件管理器，同时支持智能体对话读写",
   "description_i18n": {
