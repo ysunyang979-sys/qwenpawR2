@@ -59,7 +59,6 @@ def load_config() -> R2Config:
         token=_env("R2_TOKEN", _env("CLOUDFLARE_API_TOKEN")),
     )
 
-    # Check ~/.qwenpaw/config.json
     try:
         cfg_path = Path.home() / ".qwenpaw" / "config.json"
         if cfg_path.is_file():
@@ -85,16 +84,42 @@ def load_config() -> R2Config:
     return cfg
 
 
+def save_config(new_cfg: Dict[str, Any]) -> None:
+    cfg_dir = Path.home() / ".qwenpaw"
+    cfg_dir.mkdir(parents=True, exist_ok=True)
+    cfg_path = cfg_dir / "config.json"
+    data = {}
+    if cfg_path.is_file():
+        try:
+            with open(cfg_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            data = {}
+    
+    data.setdefault("r2", {})
+    for k in ["account_id", "access_key_id", "secret_access_key", "bucket_name", "endpoint_url"]:
+        if k in new_cfg and new_cfg[k] is not None:
+            data["r2"][k] = str(new_cfg[k]).strip()
+
+    with open(cfg_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
 class R2Service:
     def __init__(self, config: Optional[R2Config] = None):
         self.config = config or load_config()
+        self._s3_client = None
+
+    def update_config(self, cfg_dict: Dict[str, Any]):
+        save_config(cfg_dict)
+        self.config = load_config()
         self._s3_client = None
 
     def _get_s3(self):
         if not HAS_BOTO3:
             raise RuntimeError("Python package 'boto3' is not installed.")
         if not self.config.has_s3_creds:
-            raise ValueError("Cloudflare R2 S3 credentials (account_id/access_key_id/secret_access_key) are not configured.")
+            raise ValueError("Cloudflare R2 S3 凭证未配置。请点击右上角「配置凭证」设置。")
         if self._s3_client is None:
             self._s3_client = boto3.client(
                 "s3",
@@ -107,7 +132,7 @@ class R2Service:
         return self._s3_client
 
     def get_status(self) -> Dict[str, Any]:
-        configured = bool(self.config.has_s3_creds or (self.config.token and self.config.account_id))
+        configured = bool(self.config.has_s3_creds)
         res = {
             "configured": configured,
             "connected": False,
@@ -116,7 +141,7 @@ class R2Service:
             "error": None,
         }
         if not configured:
-            res["error"] = "未检测到 R2 配置。请在 .env 或 ~/.qwenpaw/config.json 中配置 R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY。"
+            res["error"] = "未配置 R2 S3 凭证，请点击右上角「配置凭证」进行设置。"
             return res
 
         try:
@@ -128,7 +153,7 @@ class R2Service:
             res["error"] = str(e)
             return res
 
-    def list_directory(self, path: str = "", limit: int = 50) -> Dict[str, Any]:
+    def list_directory(self, path: str = "", limit: int = 200) -> Dict[str, Any]:
         prefix = path.strip("/")
         if prefix and not prefix.endswith("/"):
             prefix += "/"
@@ -168,7 +193,7 @@ class R2Service:
 
         return {"directory": path, "entries": entries}
 
-    def read_file_chunk(self, path: str, offset: int = 0, limit: int = 50000) -> Dict[str, Any]:
+    def read_file_chunk(self, path: str, offset: int = 0, limit: int = 100000) -> Dict[str, Any]:
         key = path.lstrip("/")
         s3 = self._get_s3()
         range_header = f"bytes={offset}-{offset + limit - 1}"
@@ -184,7 +209,7 @@ class R2Service:
         try:
             content_str = content_bytes.decode("utf-8")
         except UnicodeDecodeError:
-            content_str = f"[二进制文件或非 UTF-8 编码，大小 {len(content_bytes)} 字节]"
+            content_str = f"[二进制或媒体文件，大小: {len(content_bytes)} 字节]"
 
         return {
             "path": path,

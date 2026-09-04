@@ -1,16 +1,17 @@
 {
   "id": "cloudflare-r2-tool",
-  "name": "Cloudflare R2 Storage Tool",
-  "version": "1.0.1",
-  "type": "tool",
-  "description": "Read, write, list and manage files in Cloudflare R2 cloud object storage",
+  "name": "Cloudflare R2 云存储",
+  "version": "1.1.0",
+  "type": "app",
+  "description": "Cloudflare R2 云端对象存储管理应用，在左侧导航栏提供可视化文件管理器，同时支持智能体对话读写",
   "description_i18n": {
-    "zh-CN": "在对话中直接管理与读写 Cloudflare R2 云端对象存储文件（列出、读取、上传、删除）",
-    "en-US": "Read, write, list and manage files in Cloudflare R2 cloud object storage"
+    "zh-CN": "Cloudflare R2 云端对象存储管理应用，在左侧导航栏提供可视化文件管理器，同时支持智能体对话读写",
+    "en-US": "Cloudflare R2 cloud object storage manager app with visual file explorer and agent tools"
   },
   "author": "Custom",
   "entry": {
-    "backend": "cloudflare_r2.py"
+    "backend": "cloudflare_r2.py",
+    "frontend": "ui/index.js"
   },
   "dependencies": [
     "boto3>=1.28.0"
