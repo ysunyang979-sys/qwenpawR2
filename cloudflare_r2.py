@@ -177,3 +177,8 @@ class CloudflareR2Plugin:
             logger.info("Cloudflare R2 HTTP router registered under /api/r2")
         except Exception as e:
             logger.warning(f"Failed to register R2 HTTP router: {e}")
+
+
+# Export plugin instance for QwenPaw PluginLoader
+plugin = CloudflareR2Plugin()
+app = plugin
